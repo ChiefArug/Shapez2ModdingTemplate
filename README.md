@@ -12,8 +12,8 @@ The build script included with this project will automatically:
 - Download and extract the debug executables from Unity
 - Patch Shapez 2 with aforementioned debug executables
 - Tell your IDE all about the local Shapez 2 installation just created
-- Automatically update Shapez 2 whenever an update is available (theoretically - I have not tested this yet)
-- Provides Rider run configurations for running the game directly through Rider. Note this **requires steam running in the background** and more importantly **DOES NOT BYPASS DRM**.
+- Automatically update Shapez 2 (and Unity, if needed) whenever an update is available
+- Provides Rider run configurations for running the game directly through Rider. Note this **requires steam running in the background**.
 - Automatically track the player.log file when run through Rider - click on the player.log tab in the run tabs next to Console
 
 
