@@ -71,8 +71,7 @@
         Shapez 2 for mod development and debugging of Shapez 2 and your mod.
 
          Yes none of this is needed if you just point the build file to a
-        local copy of Shapez 2 and give up debugging but that means editing
-                this file per computer/collaborator and no debug :(
+                    local copy of Shapez 2 and give up debugging
 
         If you are using this template for multiple mods it is reccomended
         that you set the SHAPEZ2_MODDING_PATH environment variable so all
@@ -127,7 +126,6 @@
         <Touch Files="$(BasePath)/game/update_last_checked_timestamp" AlwaysCreate="true"/>
 
         <!-- Extract the Unity version number from the freshly downloaded game files -->
-        <!-- If your IDE shows an error here ignore it, ConsoleToMSBuild does work -->
         <Exec Command="strings $(BasePath)/game/UnityPlayer.so | grep -x -E -m 1 '[0-9]+\.[0-9]+\.[0-9a-z]+ \([0-9a-z]{12}\)'" ConsoleToMSBuild="true">
             <Output TaskParameter="ConsoleOutput" PropertyName="FullUnityVersion"/>
         </Exec>
