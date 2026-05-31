@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk" InitialTargets="RemoveBackports">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
@@ -14,6 +14,7 @@
         <XDG_CONFIG_HOME Condition="'$(XDG_CONFIG_HOME)' == ''">$(HOME)/.config</XDG_CONFIG_HOME>
         <ModsFolder>$(XDG_CONFIG_HOME)/unity3d/tobspr Games/shapez 2/mods</ModsFolder>
         <Shapze2Dlls Condition=" '$(Shapez2Dlls)' == '' ">$(BasePath)/game/shapez 2_Data/Managed/*.dll</Shapze2Dlls>
+        <WorkshopDependencies Condition=" '$(WorkshopDependencies)' == '' ">$(BasePath)/workshop/*/*.dll</WorkshopDependencies>
         <ModName>HelloWorld</ModName>
         <OutputPath>$(ModsFolder)/$(ModName)</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -25,6 +26,11 @@
         <!-- Generate full debug files so that you can debug your mod. However you do not need to ship them with your mod -->
         <DebugType>full</DebugType>
 
+        <!-- Rider sets this env var when running a sync but not when running a build. -->
+        <!-- We use this to not download stuff during sync so it doesn't take ages or potentially stall. -->
+        <IsProjectSync Condition="'$(MSBUILD_TASK_PARENT_PROCESS_PID)' == ''">false</IsProjectSync>
+        <IsProjectSync Condition="'$(MSBUILD_TASK_PARENT_PROCESS_PID)' != ''">true</IsProjectSync>
+        
         <!-- These are here so that we can reference them quickly later on -->
         <SteamAppId>2162800</SteamAppId>
         <UnityRuntimeFiles>Editor/Data/PlaybackEngines/LinuxStandaloneSupport/Variations/linux64_player_development_mono</UnityRuntimeFiles>
@@ -34,36 +40,42 @@
         <SteamAppIdFile>steam_appid.txt</SteamAppIdFile>
     </PropertyGroup>
     <ItemGroup>
+        <!-- Dependencies to download from the workshop-->
+        <!-- Name is required but can be anything unique and is used to name the target folder.-->
+        <!-- Increment Version to force an update -->
+        <!-- (this workaround is required due to login ratelimits and depotdownloader taking a while to login and check its up to date) -->
+        <WorkshopDependency Include="3591335975" Name="AssimpNet" Version="1"/>
+        <WorkshopDependency Include="3542712030" Name="Monomod" Version="1"/>
+        <WorkshopDependency Include="3542611357" Name="ShapezShifter" Version="1"/>
         <!-- Reference all DLLs in the game. If you do not actually use anything in a DLL,
          that DLL will not get referenced in your compiled mod, so it's fine to just reference everything.
          Private="False" means that the referenced DLLs will not get copied to the output directory. -->
         <Reference Include="$(Shapze2Dlls)" Private="false"/>
+        <Reference Include="$(WorkshopDependencies)" Private="false"/>
         <!-- Harmony -->
         <!-- <Reference Include="C:\Program Files (x86)\Steam\steamapps\workshop\content\1796470\3385184093\*.dll" Private="false"/> -->
     </ItemGroup>
-
-    <!-- MonoMod.Backports.dll is required for MonoMod to work, but adding it as a reference causes issues,
-     as it contains a lot of types already included in Unity's standard library mscorlib.dll. Exclude it
-     from the gshapez2_daalobbed references using this snippit. (make sure to add InitialTargets="RemoveBackports" to
-     the <Project> tag at the top of this file) -->
-    <Target Name="RemoveBackports">
-<!--        <ItemGroup>-->
-<!--            <Reference Remove="@(Reference)" Condition="$([System.String]::new('%(Reference.Filename)').Contains('Backports'))"/>-->
-<!--        </ItemGroup>-->
-    </Target>
-
+    
     <!-- Make every class and property from the game public -->
     <ItemGroup>
-        <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" /><Publicize Include="Assembly-CSharp" />
-        <!--
-        ... Add other DLLs you'd like to publicize here ...
-        Check out Krafs.Publicizer's documentation for more information: https://github.com/krafs/Publicizer#usage
-        -->
+        <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" />
+        <DoNotPublicize Include="SPZGameAssembly:BeltLaneRenderingDefinition" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false"/>
+        <DoNotPublicize Include="Game.Core.Coordinates" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false"/>
+        <DoNotPublicize Include="SPZGameAssembly:BuildingDefinition" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false"/>
+        <DoNotPublicize Include="Game.Orchestration:ParentToolbarElementData" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false"/>
+        <DoNotPublicize Include="Game.Orchestration:RootToolbarElementData" IncludeCompilerGeneratedMembers="false" IncludeVirtualMembers="false"/>
+        
         <!-- TODO: automatically generate this? -->
         <None Update="manifest.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="Resources/*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
+    <PropertyGroup>
+        <PublicizeAll>true</PublicizeAll>
+    </PropertyGroup>
 
     <!--
         ====================== SHAPEZ 2 SETUP TARGETS ======================
@@ -118,7 +130,7 @@
         <!-- Timeout is 5 minutes by default, you might need to increase this -->
         <Exec Condition="Exists('.steamuser')" Command="cat .steamuser | xargs $(DepotDownloader) -app $(SteamAppId) -remember-password -dir $(BasePath)/game -username " Timeout="300000"/>
         <!-- Run without the username if its not specified. This requires signing in each time! -->
-        <Exec Condition="!Exists('.steamuser')" Command="$(DepotDownloader) -app $(SteamAppId) -qr $(BasePath)/game -remember-password -dir $(BasePath)/game" Timeout="300000"/>
+        <Exec Condition="!Exists('.steamuser')"                       Command="$(DepotDownloader) -app $(SteamAppId) -remember-password -dir $(BasePath)/game -qr"        Timeout="300000"/>
         <Message Condition="!Exists('.steamuser')" Text="Now that you have logged in once, you can specify your steam username in a .steamuser file to automatically log in next time!" Importance="high"/>
 
         <!-- This makes sure that even if the SteamInfoFile file gets updated with a non game related change, this task doesnt keep running every build. -->
@@ -197,8 +209,24 @@
         <WriteLinesToFile File=".shapez2_modding_path" Lines="$(BasePath)" WriteOnlyWhenDifferent="true" Overwrite="true"/>
     </Target>
 
+    <!-- This target exits so we can have an input of versions of workshop dependencies -->
+    <Target Name="ExportDependencies" Outputs="$(BasePath)/workshop/%(WorkshopDependency.Name)/.version">
+        <WriteLinesToFile File="$(BasePath)/workshop/%(Name)/.version" Lines="%(WorkshopDependency.Version)" WriteOnlyWhenDifferent="true" Overwrite="true"/>
+    </Target>
+    <!-- Download workshop dependencies specified above -->
+    <Target Name="DownloadWorkshopDependencies" DependsOnTargets="ExportDependencies" Inputs="$(BasePath)/workshop/%(WorkshopDependency.Name)/.version" Outputs="$(BasePath)/workshop/%(WorkshopDependency.Name)/manifest.json">
+        <!-- The same as the DownloadGameFiles task-->
+        <Exec Condition="Exists('.steamuser')" Command="cat .steamuser | xargs $(DepotDownloader) -app $(SteamAppId) -pubfile %(WorkshopDependency.Identity) -remember-password -dir $(BasePath)/workshop/%(WorkshopDependency.Name) -username " Timeout="300000"/>
+        <Exec Condition="!Exists('.steamuser')"                       Command="$(DepotDownloader) -app $(SteamAppId) -pubfile %(WorkshopDependency.Identity) -remember-password -dir $(BasePath)/workshop/%(WorkshopDependency.Name) -qr"        Timeout="300000"/>
+    </Target>
+    
+    <Target Name="SetupLibLinks" Inputs="/usr/lib/libdl.so.2" Outputs="$(BasePath)/libs/libdl.so">
+        <MakeDir Directories="$(BasePath)/libs/"/>
+        <Exec Command="ln -s /usr/lib/libdl.so.2 $(BasePath)/libs/libdl.so"/>
+    </Target>
+
     <!-- Write the run configurations to the .run folder using the path that we installed the game to. -->
-    <Target Name="SetupRunConfigurations" Inputs=".shapez2_modding_path" Outputs=".run/Launch Shapez 2 (Unity).run.xml;.run/Launch Shapez 2 (Steam).run.xml" DependsOnTargets="ExportModdingPath">
+    <Target Name="SetupRunConfigurations" Inputs=".shapez2_modding_path" Outputs=".run/Launch Shapez 2 (Unity).run.xml;.run/Launch Shapez 2 (Steam).run.xml" DependsOnTargets="ExportModdingPath;SetupLibLinks">
         <PropertyGroup>
             <SteamRunConfig>
                 <component name="ProjectRunConfigurationManager">
@@ -231,6 +259,9 @@
                         <option name="ENV_FILE_PATHS" value="" />
                         <option name="REDIRECT_INPUT_PATH" value="" />
                         <option name="MIXED_MODE_DEBUG" value="0" />
+                        <envs>
+                            <env name="LD_LIBRARY_PATH" value="$(BasePath)/libs/:$LD_LIBRARY_PATH" />
+                        </envs>
                         <method v="2">
                             <option name="Build Solution" enabled="true" />
                         </method>
@@ -243,8 +274,10 @@
         <WriteLinesToFile File=".run/Launch Shapez 2 (Direct).run.xml" Lines="$(DirectRunConfig)" WriteOnlyWhenDifferent="false" Overwrite="true"/>
     </Target>
 
-    <!-- This is a very small target thats primary purpose is to depend on PatchShapez2Files and run before the build is prepared-->
-    <Target Name="Setup" DependsOnTargets="PatchShapez2Files" BeforeTargets="PrepareForBuild">
+    <!-- This is a very small target thats primary purpose is to depend on PatchShapez2Files and DownloadWorkshopDependencies and run before the build is prepared-->
+    <Target Condition="!$(IsProjectSync)" Name="Setup" BeforeTargets="PrepareForBuild">
+        <CallTarget Targets="PatchShapez2Files"/>
+        <CallTarget Targets="DownloadWorkshopDependencies"/>
         <CallTarget Targets="SetupRunConfigurations"/>
         <Exec Command="echo Setup complete!"/>
     </Target>
