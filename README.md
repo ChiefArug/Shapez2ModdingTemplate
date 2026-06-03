@@ -15,7 +15,10 @@ The build script included with this project will automatically:
 - Automatically update Shapez 2 (and Unity, if needed) whenever an update is available
 - Provides Rider run configurations for running the game directly through Rider. Note this **requires steam running in the background**.
 - Automatically track the player.log file when run through Rider - click on the player.log tab in the run tabs next to Console
-
+- Automatically download any workshop dependencies you specify (comes with Shapez Shifter and its dependents by default)
+  - Also note that this doesn't apply them to the game, you need to subscribe to them in the workshop for that.
+- Fixes the Assimp mod not loading on linux.
+- Sets up a publishing script
 
 
 ## Should I use it?
@@ -35,6 +38,12 @@ Due to the limitations of Rider and MSBuild there are some caveats with this sys
 - Next the longest process begins, that of extracting the few files we need from the ~4gb Unity tarball. This will take a while.
 - After this it should finish near instantly, with a lot of big red errors.
 - These errors are because we only just downloaded the game dlls. A Project Sync is required to make the IDE recognise these files, so restart the IDE and it should resync.
+
+## Publishing
+To publish run the Publish Rider run, or run `dotnet msbuild ./QuickPlay.csproj -t:SteamPublish -v:diag` in a terminal.
+If it doesn't do anything in about 60 seconds, kill it and see what went wrong (the output only shows up after you kill the process, dotnet is dumb).
+Likely you aren't logged into SteamCMD.
+
 
 ## Troubleshooting
 #### Stuck on Syncing:
