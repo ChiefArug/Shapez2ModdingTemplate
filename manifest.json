@@ -4,5 +4,17 @@
   "Author": "ChiefArug",
   "Assemblies": [
     "HelloWorld.dll"
+  ],
+  "Dependencies": [
+    {
+      "ModTitle": "MonoMod.RuntimeDetour",
+      "ModId": "steam:3542712030",
+      "Version": "*"
+    },
+    {
+      "ModTitle": "Shapez Shifter",
+      "ModId": "steam:3542611357",
+      "Version": "*"
+    }
   ]
 }
